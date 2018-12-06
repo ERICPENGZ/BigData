@@ -18,7 +18,7 @@ public class maxtemp {
         FileOutputFormat.setOutputPath(job,new Path(args[1]));
 
         //可以设置分区
-        //job.setPartitionerClass(mypartition.class);
+        job.setPartitionerClass(YearPartition.class);
 
         //设置合成类
         //job.setCombinerClass(MaxtempTemp.class);
