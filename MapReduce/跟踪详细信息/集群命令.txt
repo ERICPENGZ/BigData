@@ -1,0 +1,12 @@
+
+1.首先用maven打出jar包
+2.上传文件到指定目录：hdfs://s201/user/master/data
+3.在主程序里需要对相应文件进行指定
+4.输出目录hdfs://s201/user/master/data/out
+
+运行命令
+hadoop jar hdfs.jar hadoop_hdfs.mr.WCapp hdfs://s201/user/master/data hdfs://s201/user/master/data/out
+
+
+hdfs dfs -cat /user/master/data/out/part-r-00000
+
