@@ -1,0 +1,81 @@
+演示mysql事务隔离级别
+------------------------
+	1.开启mysql客户端
+		mysql>
+	2.关闭自动提交
+		mysql>set autocommit 0 ;
+	3.每次操作数据,都要开启事务，提交事务。
+
+脏读现象
+----------------
+	[A]
+		1)mysql>start transaction ;								-- 开始事务 
+		2)msyql>update users set age = age + 1 where id = 1 ;	-- 更新数据,没有提交 
+		6)mysql>rollback ;										-- 回滚
+		7)mysql>select * from users ;
+
+	[B]
+		3)mysql>set session transaction isolation level read uncommitted ;	-- 读未提交 
+		4)msyql>start transaction ;		-- 开始事务 
+		5)mysql>select * from users ;	-- 13
+
+避免脏读
+----------------
+	[A]
+		1)mysql>start transaction ;								-- 开始事务
+		2)msyql>update users set age = age + 1 where id = 1 ;	-- 更新数据,没有提交
+		6)mysql>rollback ;										-- 回滚
+		7)mysql>select * from users ;
+
+	[B]
+		3)mysql>set session transaction isolation level read committed ;	-- 读已提交
+		4)msyql>start transaction ;		-- 开始事务
+		5)mysql>select * from users ;	-- 13
+
+
+测试不可重复读(隔离级别设置为读已提交不能避免不可重复读。)
+------------------
+	[A]
+		1)mysql>commit ;
+		2)mysql>set session transaction isolation level read committed ;	-- 读已提交
+		3)mysql>start transaction ;											-- 开始事务
+		4)mysql>select * from users	;										-- 查询
+		9)mysql>select * from users	;
+
+	[B]
+		5)mysql>commit;
+		6)mysql>start transaction ;	
+		7)mysql>update users set age = 15 where id = 1 ;					-- 更新
+		8)mysql>commit;
+
+测试避免不可重复读(隔离级别设置为读已提交不能避免不可重复读。)
+------------------
+	[A]
+		1)mysql>commit ;
+		2)mysql>set session transaction isolation level repeatable read ;	-- 可以重复读
+		3)mysql>start transaction ;											-- 开始事务
+		4)mysql>select * from users	;										-- 查询
+		9)mysql>select * from users	;
+
+	[B]
+		5)mysql>commit;
+		6)mysql>start transaction ;	
+		7)mysql>update users set age = 15 where id = 1 ;					-- 更新
+		8)mysql>commit;
+
+
+
+测试幻读(隔离级别设置为repeatable)
+------------------
+	[A]
+		1)mysql>commit ;
+		2)mysql>set session transaction isolation level serializable;		-- 串行化
+		3)mysql>start transaction ;											-- 开始事务
+		4)mysql>select * from users	;										-- 查询
+		9)mysql>select * from users	;
+
+	[B]
+		5)mysql>commit;
+		6)mysql>start transaction ;	
+		7)mysql>insert into users(name,age) values('tomas',13);				-- 更新
+		8)mysql>commit;
