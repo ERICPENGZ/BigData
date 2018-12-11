@@ -1,0 +1,577 @@
+HA
+---------------
+	3个JournalNode,edit log
+	两个NN，active | standby
+	2NN
+
+
+ha的管理命令
+------------------
+	hdfs haadmin -getServiceState nn1		//查看服务
+	hdfs haadmin -transitionToActive nn1	//激活
+	hdfs haadmin -transitionToStandby nn2	//待命
+	hdfs haadmin -failover nn1 nn2			//对调
+
+数据仓库
+---------------
+	OLAP		//online analyze process,在线分析处理
+				//延迟性高.
+
+数据库
+---------------
+	OLTP		//online transaction process在线事务处理.
+				//实时性好。
+				//注重事务性处理
+
+
+hive  
+--------------
+	数据仓库
+
+	
+
+
+
+jdbc
+----------------------
+	java database connection,java数据库连接。
+	
+	1.创建mysql数据库和表
+		 create table users(id int primary key auto_increment , name varchar(20) , age int);
+	2.idea中创建jdbcDemo模块
+	3.接口
+		 Connection
+		 Statement
+		 PreparedStatement ppst
+		 CallabelStatement cst
+		 ResultSet
+
+sql执行:原生sql，语法检查，语义检查。
+		prepareStatement:预编译：？,？,？（绑定参数）
+
+	
+
+事务:transaction,
+-----------------------
+	概念：和数据库之间的一组操作。
+	特点.
+	a		//atomic,原子性,不可分割.
+	c		//consistent,不能破坏掉
+	i		//isolate,隔离型：互不影响
+	d		//durable.永久性
+
+
+truncate
+-----------------
+	截断表，类似于delete操作，速度快，数据无法回滚。
+	truncate table users ;
+
+sql语句
+------------------
+	1.
+	2.
+	3.
+
+Transaction
+-----------------
+	commit			//提交
+	rollback		//回滚   
+	savePoint		//保存点（撤销一段操作）
+
+
+100000条
+--------
+	Statement				//46698
+	PreparedStatent			//43338
+	CallableStatement		//14385
+	
+
+mysql存储过程
+-----------------
+把存储过程定义到服务器端，降低CS之间的交互量
+存储和函数的区别：有没有返回值
+
+
+
+msyql>-- 定义新的终止符,*****不要带空格*****
+mysql>delimiter //
+
+mysql>-- 创建存储过程
+mysql>CREATE PROCEDURE simpleproc (OUT param1 INT)
+		BEGIN
+		SELECT COUNT(*) INTO param1 FROM users;		-- into 是赋值方式之一
+		END
+		//
+
+
+mysql>-- 查看存储过程的状态
+mysql>show procedure status //
+
+mysql>-- 查看指定存储过程创建语句
+mysql>show create procedure simpleproc ;
+
+mysql>-- 调用存储过程,@a在命令中定义变量
+mysql>call simpleproc(@a)
+
+mysql>-- 定义加法存储过程,set赋值语句 := 
+mysql>create procedure sp_add(in a int,in b int, out c int)
+		begin
+			set c := a + b ;
+		end 
+		//
+	call sp_add(1,2,@b)//
+	select @b//
+
+java访问存储过程
+--------------------------
+	package com.it18zhang.jdbcdemo.test;
+
+	import org.junit.Test;
+
+	import java.sql.*;
+
+	/**
+	 * 测试基本操作
+	 */
+	public class TestCRUD {
+		/**
+		 * 存储过程
+		 */
+		@Test
+		public void testCallableStatement() throws Exception {
+			long start = System.currentTimeMillis();
+			//创建连接
+			String driverClass = "com.mysql.jdbc.Driver";
+			String url = "jdbc:mysql://localhost:3306/big4";
+			String username = "root";
+			String password = "root";
+			Class.forName(driverClass);
+			Connection conn = DriverManager.getConnection(url, username, password);
+			//关闭自动提交
+			conn.setAutoCommit(false);
+
+			//创建可调用语句，调用存储过程
+			CallableStatement cst = conn.prepareCall("{call sp_add(?,?,?)}");
+			cst.setInt(1,2);        //绑定参数
+			cst.setInt(2,3);
+			//注册输出参数类型
+			cst.registerOutParameter(3,Types.INTEGER);
+			cst.execute();
+			int sum = cst.getInt(3);
+			System.out.println(sum);
+			conn.commit();
+			conn.close();
+			System.out.println(System.currentTimeMillis() - start);
+		}
+	}
+
+
+百万数据插入，存储过程的性能
+------------------------------
+	1.创建存储过程
+		mysql>create procedure sp_batchinsert(in n int)
+			begin
+			DECLARE name0 varchar(20);	-- 定义在begin内部
+			DECLARE age0 int;
+			DECLARE i int default 0 ;
+				while i < n do
+					set name0 := concat('tom',i) ; //链接函数
+					set age0 := i % 100 ;
+					insert into users(name,age) values(name0,age0);
+					set i := i + 1 ;
+				end while ;
+			end 
+
+			//
+	2.java代码
+		@Test
+		public void testCallableStatement() throws Exception {
+			long start = System.currentTimeMillis();
+			//创建连接
+			String driverClass = "com.mysql.jdbc.Driver";
+			String url = "jdbc:mysql://localhost:3306/big4";
+			String username = "root";
+			String password = "root";
+			Class.forName(driverClass);
+			Connection conn = DriverManager.getConnection(url, username, password);
+			//关闭自动提交
+			conn.setAutoCommit(false);
+
+			//创建可调用语句，调用存储过程
+			CallableStatement cst = conn.prepareCall("{call sp_batchinsert(?)}");
+			cst.setInt(1,1000000);        //绑定参数
+			//注册输出参数类型
+			cst.execute();
+			conn.commit();
+			conn.close();
+			System.out.println(System.currentTimeMillis() - start);
+		}
+
+
+mysql函数
+------------------
+	1.函数和存储过程相似，只是多了返回值声明.
+	2.创建函数
+		mysql>create function sf_add(a int ,b int) returns int
+			begin
+				return a + b ;
+			end
+			//
+
+	3.显式创建的函数
+		mysql>show function status				-- 
+		mysql>show function status like '%add%'	-- 
+		mysql>select sf_add(1,2)				--
+	
+	4.java调用函数
+		@Test
+		public void testFunction() throws Exception {
+			long start = System.currentTimeMillis();
+			//创建连接
+			String driverClass = "com.mysql.jdbc.Driver";
+			String url = "jdbc:mysql://localhost:3306/big4";
+			String username = "root";
+			String password = "root";
+			Class.forName(driverClass);
+			Connection conn = DriverManager.getConnection(url, username, password);
+			//关闭自动提交
+			conn.setAutoCommit(false);
+
+			//创建可调用语句，调用存储过程
+			CallableStatement cst = conn.prepareCall("{? = call sf_add(?,?)}");
+			cst.setInt(2,100);
+			cst.setInt(3,200);
+			cst.registerOutParameter(1,Types.INTEGER);
+			//注册输出参数类型
+			cst.execute();
+			System.out.println(cst.getInt(1));
+			conn.commit();
+			conn.close();
+			System.out.println(System.currentTimeMillis() - start);
+		}
+
+
+MVCC
+----------------
+	multiple version concurrent control,多版本并发控制。
+
+
+
+事务的并发执行，容易出现的几个现象
+--------------------------
+	1.脏读
+		读未提交,一个事务读取了另外一个事务改写还没有提交的数据，如果另外一个
+		事务在稍后的时候回滚。
+
+	2.不可重复读
+		一个事务进行相同条件查询连续的两次或者两次以上，每次结果都不同。
+		有其他事务做了update操作。
+
+	3.幻读
+		和(2)很像，其他事务做了insert操作.
+
+
+隔离级别
+----------------
+	为了避免出现哪种并发现象的。
+	1		//read uncommitted	,读未提交
+	2		//read committed	,读已提交
+	4		//repeatable read	,可以重复读
+	8		//serializable		,串行化(悲观锁)
+
+
+
+演示mysql事务隔离级别
+------------------------
+	1.开启mysql客户端
+		mysql>
+	2.关闭自动提交
+		mysql>set autocommit 0 ;
+	3.每次操作数据,都要开启事务，提交事务。
+
+脏读现象
+----------------
+	[A]
+		1)mysql>start transaction ;								-- 开始事务 
+		2)msyql>update users set age = age + 1 where id = 1 ;	-- 更新数据,没有提交 
+		6)mysql>rollback ;										-- 回滚
+		7)mysql>select * from users ;
+
+	[B]
+		3)mysql>set session transaction isolation level read uncommitted ;	-- 读未提交 
+		4)msyql>start transaction ;		-- 开始事务 
+		5)mysql>select * from users ;	-- 13
+
+避免脏读
+----------------
+	[A]
+		1)mysql>start transaction ;								-- 开始事务
+		2)msyql>update users set age = age + 1 where id = 1 ;	-- 更新数据,没有提交
+		6)mysql>rollback ;										-- 回滚
+		7)mysql>select * from users ;
+
+	[B]
+		3)mysql>set session transaction isolation level read committed ;	-- 读已提交
+		4)msyql>start transaction ;		-- 开始事务
+		5)mysql>select * from users ;	-- 13
+
+
+测试不可重复读(隔离级别设置为读已提交不能避免不可重复读。)
+------------------
+	[A]
+		1)mysql>commit ;
+		2)mysql>set session transaction isolation level read committed ;	-- 读已提交
+		3)mysql>start transaction ;											-- 开始事务
+		4)mysql>select * from users	;										-- 查询
+		9)mysql>select * from users	;
+
+	[B]
+		5)mysql>commit;
+		6)mysql>start transaction ;	
+		7)mysql>update users set age = 15 where id = 1 ;					-- 更新
+		8)mysql>commit;
+
+测试避免不可重复读(隔离级别设置为读已提交不能避免不可重复读。)
+------------------
+	[A]
+		1)mysql>commit ;
+		2)mysql>set session transaction isolation level repeatable read ;	-- 可以重复读
+		3)mysql>start transaction ;											-- 开始事务
+		4)mysql>select * from users	;										-- 查询
+		9)mysql>select * from users	;
+
+	[B]
+		5)mysql>commit;
+		6)mysql>start transaction ;	
+		7)mysql>update users set age = 15 where id = 1 ;					-- 更新
+		8)mysql>commit;
+
+
+
+测试幻读(隔离级别设置为repeatable)
+------------------
+	[A]
+		1)mysql>commit ;
+		2)mysql>set session transaction isolation level serializable;		-- 串行化
+		3)mysql>start transaction ;											-- 开始事务
+		4)mysql>select * from users	;										-- 查询
+		9)mysql>select * from users	;
+
+	[B]
+		5)mysql>commit;
+		6)mysql>start transaction ;	
+		7)mysql>insert into users(name,age) values('tomas',13);				-- 更新
+		8)mysql>commit;
+
+
+ANSI SQL
+---------------------
+	美国国家标准结构SQL组
+
+	select * from users for update ;//查询时直接加上独占写锁；
+	效果：
+	  client1：start transction; select name from users where id = 1 for update（拿到写锁）;
+	  client2：selec语句没有问题/insert 语句会直接塞住（禁止写）
+	  client1: commit
+	  client2:insert成功
+	  
+
+
+MySQL
+----------------------
+	1.支持四种隔离级别。
+	2.默认隔离级别是可以重复读。
+	3.隔离级别是seriable,不支持并发写。
+
+
+表级锁
+-------------------------
+	LOCK TABLE t WRITE;	-- 加锁(表级锁,read)
+	
+	UNLOCK TABLES ;		-- 解除自己所有的所有表级锁
+	
+
+
+编程实现脏读现象
+--------------------
+	package com.it18zhang.jdbcdemo.test;
+	import org.junit.Test;
+	import java.sql.*;
+	/**
+	 * 测试隔离级别
+	 */
+	public class TestIsolationLevel {
+
+		/**
+		 * 执行写，不提交
+		 */
+		@Test
+		public void testA() throws  Exception{
+			//创建连接
+			String driverClass = "com.mysql.jdbc.Driver";
+			String url = "jdbc:mysql://localhost:3306/big4";
+			String username = "root";
+			String password = "root";
+			Class.forName(driverClass);
+			Connection conn = DriverManager.getConnection(url, username, password);
+			conn.setAutoCommit(false);
+			Statement st = conn.createStatement();
+			st.execute("update users set age = 80 where id = 1");
+
+			System.out.println("===============");
+			conn.commit();
+			conn.close();
+		}
+
+		/**
+		 * 查询，查到别人没有提交的数据
+		 */
+		@Test
+		public void testB() throws  Exception{
+			//创建连接
+			String driverClass = "com.mysql.jdbc.Driver";
+			String url = "jdbc:mysql://localhost:3306/big4";
+			String username = "root";
+			String password = "root";
+			Class.forName(driverClass);
+			Connection conn = DriverManager.getConnection(url, username, password);
+
+			//设置隔离级别读未提交==>导致脏读
+			/************************** 设置隔离级别 ***************************************/
+			conn.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
+			conn.setAutoCommit(false);
+			Statement st = conn.createStatement();
+
+
+			ResultSet rs = st.executeQuery("select age from users where id = 1");
+			rs.next();
+			int age = rs.getInt(1) ;
+			System.out.println(age);
+			System.out.println("===============");
+			conn.commit();
+			conn.close();
+		}
+
+共享读锁
+-------------
+	
+独占写锁
+-------------
+	一个事务写操作，另一个塞住。
+
+SQL
+--------------------
+	//
+	insert into users(name,age,...) values('',12,..) ;				-- insert
+	update users set name = 'xxx',age = xxx ,... where id = xxx ;	-- update
+	delete from users where id = xxx								-- delete
+
+	-- 投影查询 projection.
+	select id,name from users where ... order by limit xxx			--select
+
+	-- 查询时直接上独占写锁
+	select * from users for update ;	
+	
+
+连接查询
+---------------------
+	1.准备表[mysql.sql]
+	drop table if exists customers; -- 删除表
+	drop table if exists orders ;	-- 删除表
+	create table customers(id int primary key auto_increment , name varchar(20) , age int);					-- 创建customers表
+	create table orders(id int primary key auto_increment , orderno varchar(20) , price float , cid int);	-- 创建orders表
+	
+	-- 插入数据
+	insert into customers(name,age) values('tom',12);
+	insert into customers(name,age) values('tomas',13);
+	insert into customers(name,age) values('tomasLee',14);
+	insert into customers(name,age) values('tomason',15);
+
+	-- 插入订单数据
+	insert into orders(orderno,price,cid) values('No001',12.25,1);
+	insert into orders(orderno,price,cid) values('No002',12.30,1);
+	insert into orders(orderno,price,cid) values('No003',12.25,2);
+	insert into orders(orderno,price,cid) values('No004',12.25,2);
+	insert into orders(orderno,price,cid) values('No005',12.25,2);
+	insert into orders(orderno,price,cid) values('No006',12.25,3);
+	insert into orders(orderno,price,cid) values('No007',12.25,3);
+	insert into orders(orderno,price,cid) values('No008',12.25,3);
+	insert into orders(orderno,price,cid) values('No009',12.25,3);
+	insert into orders(orderno,price,cid) values('No0010',12.25,NULL);
+
+
+	2.查询--连接查询
+	mysql>-- 笛卡尔积查询,无连接条件查询
+	mysql>select a.*,b.* from customers a , orders b ; 
+	
+	mysql>-- 内连接,查询符合条件的记录.
+	mysql>select a.*,b.* from customers a , orders b where a.id = b.cid ; 
+
+	mysql>-- 左外连接,查询符合条件的记录.
+	mysql>select a.*,b.* from customers a left outer join orders b on a.id = b.cid ; 
+
+	mysql>-- 右外连接,查询符合条件的记录.
+	mysql>select a.*,b.* from customers a right outer join orders b on a.id = b.cid ; 
+
+	mysql>-- 全外连接,查询符合条件的记录(mysql不支持全外链接)
+	mysql>select a.*,b.* from customers a full outer join orders b on a.id = b.cid ; 
+
+
+	2.查询--分组
+				 字段列表  表       条件        分组        组内条件       排序     分页
+	mysql>select ... from ... where ... group by ... having ...  order by ... limit ..
+
+
+	mysql>-- 去重查询
+	mysql>select distinct price,cid from orders ;
+
+	mysql>-- 条件查询
+	mysql>select price,cid from orders where price > 12.27 ;
+
+	mysql>-- 聚集查询
+	mysql>select max(price) from orders ;
+	mysql>select min(price) from orders ;
+	mysql>select avg(price) from orders ;
+	mysql>select sum(price) from orders ;
+	mysql>select count(id) from orders ;
+
+	mysql>-- 分组查询
+	mysql>select max(price) from orders where cid is not null group by cid ;
+
+	
+	mysql>-- 分组查询(组内过滤)
+	mysql>select cid ,orderno,max(price) as max_price,min(price) from orders where cid is not null group by cid having max_price > 20 ;
+
+	mysql>-- 降序查询
+	mysql>select cid ,orderno,max(price) as max_price,min(price) from orders where cid is not null group by cid having max_price > 20 order by max_price desc;
+
+	mysql>-- 模糊查询
+	mysql>select  * from customers where name like 'toma%'		
+	mysql>select  * from customers where name not like 'toma%'		
+
+	mysql>-- 范围查询
+	mysql>select  * from customers where id in (1,2,3)		
+	mysql>select  * from customers where id not in (1,2,3)		
+
+	mysql>-- between 1 and 10,闭区间
+	mysql>select  * from customers where id between 1 and 3 ;
+	mysql>select  * from customers where id >= 1 and id <= 3 ;
+
+	mysql>-- 嵌套子查询(查询没有订单的客户)
+	mysql>select  * from customers where id not in (select distinct cid from orders where cid is not null);
+
+	mysql>-- 嵌套子查询(查询订单数量>2的客户)
+	mysql>select * from customers where id in (select cid from orders group by cid having count(cid) > 2);
+	mysql>select * from customers where id in ( select t.cid from (select cid,count(*) as c from orders group by cid having c > 2) as t);
+
+	mysql>-- 嵌套子查询(查询客户id,客户name,订单数量,最贵订单，最便宜订单，平均订单价格 where 订单数量>2的客户)
+	mysql>select a.id,a.name,b.c,b.max,b.min,b.avg 
+		  from customers a,((select cid,count(cid) c , max(price) max ,min(price) min,avg(price) avg from orders group by cid having c > 2) as b) 
+		  where a.id = b.cid ;
+
+
+hadoop
+---------------
+	MR
+
+	左外连接.
