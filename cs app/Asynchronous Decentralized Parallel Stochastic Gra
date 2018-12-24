@@ -1,0 +1,14 @@
+
+Asynchronous Decentralized Parallel Stochastic Gradient Descent
+
+
+Abstact：
+
+	同步的算法例如ALL-reduce表现的非常差在异构的环境下，但是参数服务器具有瓶颈：通信，当通信情况变差收敛速度急剧下降。
+
+	提出了AD-PSGD算法:收敛率和单机SGD相同，且跟节点数具有线性加速比。
+
+Introduction：
+
+	现有的系统例如 TensorFlow，MXNet，CNTK支持两种通信模型：1.通过参数服务器或者all-reduce的同步通信 2：异步通信通过参数服务器。
+
